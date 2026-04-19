@@ -57,8 +57,12 @@ def _place_name(place: dict) -> str:
     return display_name.get("text", "").strip()
 
 
+def _normalize_care_type(care_type: str) -> str:
+    return (care_type or "emergency").strip().lower().replace("-", "_").replace(" ", "_")
+
+
 def _care_type_config(care_type: str) -> Tuple[list[str], str, str]:
-    normalized = (care_type or "emergency").strip().lower().replace("-", "_").replace(" ", "_")
+    normalized = _normalize_care_type(care_type)
     configs = {
         "emergency": (
             ["hospital", "general_hospital", "medical_center"],
@@ -94,7 +98,7 @@ def _care_type_config(care_type: str) -> Tuple[list[str], str, str]:
     return configs.get(normalized, configs["emergency"])
 
 
-def _looks_like_care_facility(place: dict, included_types: list[str]) -> bool:
+def _looks_like_care_facility(place: dict, included_types: list[str], care_type: str) -> bool:
     """Reduce irrelevant Places results while keeping legitimate medical facilities."""
     place_types = set(place.get("types") or [])
     primary_type = place.get("primaryType")
@@ -119,6 +123,40 @@ def _looks_like_care_facility(place: dict, included_types: list[str]) -> bool:
         place.get(field)
         for field in ("nationalPhoneNumber", "websiteUri", "rating")
     )
+    normalized_care_type = _normalize_care_type(care_type)
+
+    if normalized_care_type in {"emergency", "hospital"}:
+        excluded_types = {"pharmacy", "drugstore", "dental_clinic", "dentist", "veterinary_care"}
+        excluded_name_terms = (
+            "pharmacy",
+            "drug",
+            "dialysis",
+            "dental",
+            "dentist",
+            "orthopedic",
+            "orthopedics",
+            "outpatient",
+            "rehab",
+            "rehabilitation",
+            "veterinary",
+            "vet ",
+            "optical",
+            "vision",
+        )
+        hospital_terms = (
+            "hospital",
+            "medical center",
+            "medical campus",
+            "emergency",
+            "er",
+            "trauma",
+        )
+
+        if place_types.intersection(excluded_types):
+            return False
+        if any(term in name for term in excluded_name_terms):
+            return False
+        return has_contact_signal and any(term in name for term in hospital_terms)
 
     exact_facility_types = {"general_hospital", "hospital", "medical_lab", "pharmacy"}
     if place_types.intersection(exact_facility_types):
@@ -257,7 +295,7 @@ def find_nearby_hospitals(
         for place in places_data.get("places", []):
             if place.get("businessStatus") == "CLOSED_PERMANENTLY":
                 continue
-            if not _looks_like_care_facility(place, included_types):
+            if not _looks_like_care_facility(place, included_types, care_type):
                 continue
             filtered_places.append(place)
 
