@@ -49,6 +49,9 @@ class SessionResponse(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     session_id: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    location_label: str = Field(default="", max_length=160)
 
 
 class ChatResponse(BaseModel):
@@ -62,6 +65,9 @@ class HospitalsRequest(BaseModel):
     radius: int = Field(default=5000, ge=1000, le=50000)
     care_type: str = Field(default="emergency")
     insurance_provider: str = Field(default="", max_length=120)
+    latitude: float | None = None
+    longitude: float | None = None
+    location_label: str = Field(default="", max_length=160)
 
 
 class HospitalsResponse(BaseModel):
@@ -113,6 +119,25 @@ def _event_tools(event: Any) -> list[str]:
     return tools
 
 
+def _location_context(
+    latitude: float | None,
+    longitude: float | None,
+    location_label: str = "",
+) -> str:
+    if latitude is None or longitude is None:
+        return ""
+    if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
+        return ""
+
+    label = (location_label or "patient browser/device location").strip()
+    return (
+        "CareNav UI location context: the patient granted browser location access. "
+        f"Use latitude={latitude:.6f}, longitude={longitude:.6f}, "
+        f"location_label={label!r} when calling find_nearby_hospitals. "
+        "Do not use backend/server IP for nearby facility lookup."
+    )
+
+
 @app.get("/", include_in_schema=False)
 async def index() -> FileResponse:
     return FileResponse(UI_DIR / "index.html")
@@ -139,9 +164,18 @@ async def create_session() -> SessionResponse:
 @app.post("/api/chat")
 async def chat(request: ChatRequest) -> ChatResponse:
     session_id = await _ensure_session(request.session_id)
+    user_text = request.message.strip()
+    location_context = _location_context(
+        request.latitude,
+        request.longitude,
+        request.location_label,
+    )
+    if location_context:
+        user_text = f"{location_context}\n\nPatient request: {user_text}"
+
     message = types.Content(
         role="user",
-        parts=[types.Part(text=request.message.strip())],
+        parts=[types.Part(text=user_text)],
     )
 
     response_parts: list[str] = []
@@ -186,6 +220,9 @@ async def hospitals(request: HospitalsRequest) -> HospitalsResponse:
         radius=request.radius,
         care_type=request.care_type,
         insurance_provider=request.insurance_provider,
+        latitude=request.latitude,
+        longitude=request.longitude,
+        location_label=request.location_label,
     )
     return HospitalsResponse(text=text)
 

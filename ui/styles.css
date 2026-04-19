@@ -130,6 +130,7 @@ h2 {
 .call-button,
 .ghost-button,
 .finder-button,
+.location-button,
 .send-button,
 .quick-chip,
 .icon-button {
@@ -530,6 +531,13 @@ input[type="range"] {
   margin: 0 22px 18px;
   color: #fff;
   background: var(--indigo);
+}
+
+.location-button {
+  margin: 0 22px 10px;
+  color: var(--teal-dark);
+  background: var(--mint);
+  border: 1px solid rgba(0, 124, 137, 0.22);
 }
 
 .finder-results {

@@ -48,7 +48,7 @@
           </div>
           <div class="signal-row">
             <span>Location</span>
-            <strong>Auto IP</strong>
+            <strong id="locationStatus">Device permission</strong>
           </div>
         </div>
 
@@ -161,6 +161,14 @@
             <input id="radiusRange" type="range" min="2" max="30" step="1" value="5" />
           </div>
 
+          <button id="locationButton" class="location-button" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21s7-6.1 7-12A7 7 0 0 0 5 9c0 5.9 7 12 7 12Z" />
+              <path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+            </svg>
+            Use my location
+          </button>
+
           <button id="finderButton" class="finder-button" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 21s7-6.1 7-12A7 7 0 0 0 5 9c0 5.9 7 12 7 12Z" />
@@ -176,6 +184,6 @@
       </main>
     </div>
 
-    <script src="/static/app.js?v=2"></script>
+    <script src="/static/app.js?v=3"></script>
   </body>
 </html>

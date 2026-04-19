@@ -1,5 +1,6 @@
 const state = {
   sessionId: localStorage.getItem("carenav.sessionId") || "",
+  location: JSON.parse(localStorage.getItem("carenav.location") || "null"),
   busy: false,
 };
 
@@ -9,12 +10,69 @@ const messageInput = document.querySelector("#messageInput");
 const sendButton = document.querySelector("#sendButton");
 const newSessionButton = document.querySelector("#newSessionButton");
 const modelName = document.querySelector("#modelName");
+const locationStatus = document.querySelector("#locationStatus");
+const locationButton = document.querySelector("#locationButton");
 const finderButton = document.querySelector("#finderButton");
 const finderResults = document.querySelector("#finderResults");
 const careType = document.querySelector("#careType");
 const insuranceProvider = document.querySelector("#insuranceProvider");
 const radiusRange = document.querySelector("#radiusRange");
 const radiusValue = document.querySelector("#radiusValue");
+
+function locationPayload() {
+  if (!state.location) return {};
+  return {
+    latitude: state.location.latitude,
+    longitude: state.location.longitude,
+    location_label: state.location.label,
+  };
+}
+
+function updateLocationStatus() {
+  if (!locationStatus) return;
+  if (state.location) {
+    locationStatus.textContent = state.location.label || "Device location";
+    locationStatus.title = `${state.location.latitude.toFixed(5)}, ${state.location.longitude.toFixed(5)}`;
+  } else {
+    locationStatus.textContent = "Permission needed";
+    locationStatus.removeAttribute("title");
+  }
+}
+
+function needsLocation(text) {
+  return /\b(nearby|near me|closest|hospital|er|emergency room|urgent care|clinic|pharmacy|medicaid|unitedhealthcare|uhc|insurance|map|address)\b/i.test(text);
+}
+
+async function getBrowserLocation() {
+  if (!navigator.geolocation) {
+    throw new Error("Browser location is not available. The app will use server fallback location.");
+  }
+
+  const position = await new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 300000,
+    });
+  });
+
+  const { latitude, longitude, accuracy } = position.coords;
+  const label = `Device location (${Math.round(accuracy)}m)`;
+  state.location = { latitude, longitude, accuracy, label };
+  localStorage.setItem("carenav.location", JSON.stringify(state.location));
+  updateLocationStatus();
+  return state.location;
+}
+
+async function ensureLocationForCare() {
+  if (state.location) return state.location;
+  try {
+    return await getBrowserLocation();
+  } catch (error) {
+    updateLocationStatus();
+    return null;
+  }
+}
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -166,6 +224,9 @@ async function sendMessage(text) {
   if (!trimmed || state.busy) return;
 
   await ensureSession();
+  if (needsLocation(trimmed)) {
+    await ensureLocationForCare();
+  }
   addMessage("user", trimmed);
   messageInput.value = "";
   resizeInput();
@@ -179,6 +240,7 @@ async function sendMessage(text) {
       body: JSON.stringify({
         session_id: state.sessionId,
         message: trimmed,
+        ...locationPayload(),
       }),
     });
     state.sessionId = payload.session_id;
@@ -200,12 +262,14 @@ async function findCare() {
   finderResults.innerHTML = `<p class="empty-state loading">Searching nearby care</p>`;
 
   try {
+    await ensureLocationForCare();
     const payload = await api("/api/hospitals", {
       method: "POST",
       body: JSON.stringify({
         care_type: careType.value,
         insurance_provider: insuranceProvider.value,
         radius: Number(radiusRange.value) * 1000,
+        ...locationPayload(),
       }),
     });
 
@@ -270,6 +334,20 @@ radiusRange.addEventListener("input", () => {
   radiusValue.textContent = `${radiusRange.value} km`;
 });
 
+locationButton.addEventListener("click", async () => {
+  locationButton.classList.add("loading");
+  locationButton.disabled = true;
+  try {
+    await getBrowserLocation();
+  } catch (error) {
+    addMessage("assistant", `${error.message} You can still search, but results may reflect the server region.`);
+  } finally {
+    locationButton.classList.remove("loading");
+    locationButton.disabled = false;
+  }
+});
+
 finderButton.addEventListener("click", findCare);
 
+updateLocationStatus();
 init();

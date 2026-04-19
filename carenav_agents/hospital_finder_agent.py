@@ -1,8 +1,9 @@
 """
-Agent 2: Hospital Finder Agent
-Finds nearby hospitals using Google Places API (New).
-Automatically detects user location via IP address.
-All prompts are stored in prompt.py.
+Agent 2: Hospital Finder Agent.
+
+Finds nearby care facilities using Google Places API (New). Browser/device
+coordinates are preferred when the custom UI provides them; IP lookup is only a
+fallback for local debugging or denied location access.
 """
 
 import os
@@ -145,9 +146,12 @@ def find_nearby_hospitals(
     radius: int = 5000,
     care_type: str = "emergency",
     insurance_provider: str = "",
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    location_label: str = "",
 ) -> str:
     """
-    Find nearby care facilities using Google Places API (New) with auto-detected location.
+    Find nearby care facilities using Google Places API (New).
 
     Args:
         radius: Search radius in meters. Defaults to 5000m, or 5km.
@@ -155,18 +159,36 @@ def find_nearby_hospitals(
             urgent_care, primary_care, pharmacy, and lab.
         insurance_provider: Optional insurance plan name the user wants to verify,
             such as Medicaid or UnitedHealthcare.
+        latitude: Optional browser/device latitude from the user interface.
+        longitude: Optional browser/device longitude from the user interface.
+        location_label: Optional human-readable location label.
 
     Returns:
         Formatted list of nearby facilities with details.
     """
     try:
-        lat, lng, location_str = get_location_from_ip()
+        lat = latitude
+        lng = longitude
+        location_str = (location_label or "").strip()
+        location_source = "device location"
+
+        if lat is not None and not -90 <= lat <= 90:
+            lat = None
+        if lng is not None and not -180 <= lng <= 180:
+            lng = None
+
+        if lat is None or lng is None:
+            lat, lng, location_str = get_location_from_ip()
+            location_source = "server IP fallback"
 
         if lat is None or lng is None:
             return (
-                "Could not detect your location automatically. "
-                "Please check your internet connection."
+                "Could not detect a usable location automatically. "
+                "Please allow browser location access or enter a nearby city/ZIP code."
             )
+
+        if not location_str:
+            location_str = f"{lat:.4f}, {lng:.4f}"
 
         api_key = os.getenv("GOOGLE_PLACES_API_KEY")
         if not api_key:
@@ -255,11 +277,12 @@ Status: {_format_open_status(place)}
 
         if not facilities:
             return (
-                f"Location detected: {location_str}\n\n"
+                f"Location used: {location_str} ({location_source})\n\n"
                 f"No {care_label} found in your area. You may need to expand your search radius."
             )
 
         response_text = f"""Your location: {location_str}
+Location source: {location_source}
 Search radius: {radius / 1000} km
 Search focus: {care_label}
 Found {len(facilities)} nearby options:
@@ -290,7 +313,7 @@ hospital_finder_agent = LlmAgent(
     name="hospital_finder",
     model=config.DEFAULT_MODEL,
     description=(
-        "Medical facility locator that automatically detects user location and "
+        "Medical facility locator that uses browser/device coordinates when supplied and "
         "finds nearby hospitals using Google Places API. Provides hospital "
         "information including addresses, phone numbers, ratings, and hours for U.S. users."
     ),
