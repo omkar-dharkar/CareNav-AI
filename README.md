@@ -12,6 +12,7 @@ Live demo: https://carenav-ai-493647769398.us-central1.run.app
 - Gives U.S.-specific emergency guidance: 911, Poison Help, and 988.
 - Finds nearby hospitals, emergency departments, urgent care clinics, pharmacies, primary care clinics, and labs.
 - Uses browser/device location in the public UI for nearby care results, with server IP lookup only as a fallback.
+- Supports browser voice-to-text input so patients can speak symptoms into the chat box.
 - Adds insurance-verification guidance for Medicaid, UnitedHealthcare, Medicare, and private plans.
 - Presents results in a custom, original UI instead of the default ADK debugger.
 - Deploys to Vertex AI Agent Engine for agent hosting and Cloud Run for the public web app.

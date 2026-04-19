@@ -132,6 +132,7 @@ h2 {
 .finder-button,
 .location-button,
 .send-button,
+.voice-button,
 .quick-chip,
 .icon-button {
   min-height: 44px;
@@ -446,7 +447,7 @@ h2 {
 
 .composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 52px;
+  grid-template-columns: minmax(0, 1fr) 52px 52px;
   gap: 12px;
   padding: 18px 28px 24px;
   background: rgba(255, 255, 255, 0.86);
@@ -478,6 +479,20 @@ input:focus {
   min-height: 52px;
   color: #fff;
   background: var(--teal);
+}
+
+.voice-button {
+  width: 52px;
+  min-height: 52px;
+  color: var(--indigo);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.voice-button.listening {
+  color: #fff;
+  background: var(--coral);
+  box-shadow: 0 0 0 4px rgba(201, 67, 53, 0.14);
 }
 
 .send-button:disabled,

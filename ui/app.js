@@ -8,6 +8,7 @@ const chatLog = document.querySelector("#chatLog");
 const chatForm = document.querySelector("#chatForm");
 const messageInput = document.querySelector("#messageInput");
 const sendButton = document.querySelector("#sendButton");
+const voiceButton = document.querySelector("#voiceButton");
 const newSessionButton = document.querySelector("#newSessionButton");
 const modelName = document.querySelector("#modelName");
 const locationStatus = document.querySelector("#locationStatus");
@@ -18,6 +19,9 @@ const careType = document.querySelector("#careType");
 const insuranceProvider = document.querySelector("#insuranceProvider");
 const radiusRange = document.querySelector("#radiusRange");
 const radiusValue = document.querySelector("#radiusValue");
+
+let recognition = null;
+let listening = false;
 
 function locationPayload() {
   if (!state.location) return {};
@@ -198,6 +202,60 @@ function setBusy(value) {
   finderButton.disabled = value;
 }
 
+function setListening(value) {
+  listening = value;
+  if (!voiceButton) return;
+  voiceButton.classList.toggle("listening", value);
+  voiceButton.setAttribute("aria-label", value ? "Stop voice input" : "Start voice input");
+  voiceButton.title = value ? "Stop voice input" : "Voice input";
+}
+
+function setupVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!voiceButton || !SpeechRecognition) {
+    if (voiceButton) {
+      voiceButton.disabled = true;
+      voiceButton.title = "Voice input is not supported in this browser";
+    }
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  recognition.onresult = (event) => {
+    let finalText = "";
+    let interimText = "";
+    for (let i = event.resultIndex; i < event.results.length; i += 1) {
+      const transcript = event.results[i][0].transcript.trim();
+      if (event.results[i].isFinal) {
+        finalText += `${transcript} `;
+      } else {
+        interimText += `${transcript} `;
+      }
+    }
+
+    const existing = messageInput.value.replace(/\s*\[[^\]]*listening[^\]]*\]\s*$/i, "").trim();
+    const spoken = `${finalText}${interimText}`.trim();
+    messageInput.value = [existing, spoken ? `${spoken}${interimText ? " [listening]" : ""}` : ""]
+      .filter(Boolean)
+      .join(existing ? " " : "");
+    resizeInput();
+  };
+
+  recognition.onerror = () => {
+    setListening(false);
+  };
+
+  recognition.onend = () => {
+    messageInput.value = messageInput.value.replace(/\s*\[[^\]]*listening[^\]]*\]\s*$/i, "").trim();
+    resizeInput();
+    setListening(false);
+  };
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -347,7 +405,22 @@ locationButton.addEventListener("click", async () => {
   }
 });
 
+voiceButton?.addEventListener("click", () => {
+  if (!recognition) return;
+  if (listening) {
+    recognition.stop();
+    return;
+  }
+  try {
+    setListening(true);
+    recognition.start();
+  } catch {
+    setListening(false);
+  }
+});
+
 finderButton.addEventListener("click", findCare);
 
+setupVoiceInput();
 updateLocationStatus();
 init();
