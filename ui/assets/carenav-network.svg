@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="CareNav AI mark">
+  <defs>
+    <linearGradient id="care" x1="26" y1="22" x2="138" y2="138" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8EE1DB"/>
+      <stop offset="0.56" stop-color="#3AA7AE"/>
+      <stop offset="1" stop-color="#FFBC5C"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="136" height="136" rx="24" fill="#F7FBFC"/>
+  <path d="M80 133c-26-15-42-34-42-57 0-23 18-42 42-42s42 19 42 42c0 23-16 42-42 57Z" fill="#0F2730"/>
+  <path d="M80 119c-20-13-31-27-31-43 0-17 13-30 31-30s31 13 31 30c0 16-11 30-31 43Z" fill="url(#care)"/>
+  <path d="M80 61v34M63 78h34" stroke="#F7FBFC" stroke-width="10" stroke-linecap="round"/>
+  <path d="M37 48c16-12 30-18 43-18 14 0 28 6 43 18M37 112c16 12 30 18 43 18 14 0 28-6 43-18" stroke="#8EE1DB" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+  <circle cx="39" cy="48" r="6" fill="#FFBC5C"/>
+  <circle cx="121" cy="48" r="6" fill="#8EE1DB"/>
+  <circle cx="39" cy="112" r="6" fill="#8EE1DB"/>
+  <circle cx="121" cy="112" r="6" fill="#FFBC5C"/>
+</svg>
